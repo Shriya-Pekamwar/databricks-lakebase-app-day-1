@@ -142,6 +142,22 @@
     tbody tr:hover td { color: var(--text); }
     td:first-child { font-weight: 600; color: var(--text); }
 
+    /* --- Delete button --- */
+    .btn-delete {
+      background: transparent;
+      border: 1px solid var(--error);
+      color: var(--error);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background .2s, color .2s, transform .1s;
+      margin-top: 0;
+    }
+    .btn-delete:hover { background: var(--error); color: #fff; }
+    .btn-delete:active { transform: scale(0.95); }
+
     /* --- Responsive --- */
     @media (max-width: 600px) {
       body { padding: 24px 12px; }
@@ -175,6 +191,7 @@
         <th>Email</th>
         <th>Latest price</th>
         <th>Updated</th>
+        <th></th>
       </tr>
     </thead>
     <tbody id="watchlist-body"></tbody>
@@ -200,7 +217,7 @@
             ? Number(row.latest_price).toFixed(2)
             : "-";
           const updated = row.updated_at ? new Date(row.updated_at).toLocaleString() : "-";
-          tr.innerHTML = `<td>${row.symbol}</td><td>${row.email || "-"}</td><td>${price}</td><td>${updated}</td>`;
+          tr.innerHTML = `<td>${row.symbol}</td><td>${row.email || "-"}</td><td>${price}</td><td>${updated}</td><td><button class="btn-delete" data-symbol="${row.symbol}">Remove</button></td>`;
           watchlistBody.appendChild(tr);
         });
       } catch (err) {
@@ -229,6 +246,31 @@
         loadWatchlist();
       } catch (err) {
         resultEl.textContent = "Request failed: " + err;
+      }
+    });
+
+    // --- Delete handler ---
+    watchlistBody.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".btn-delete");
+      if (!btn) return;
+      const symbol = btn.dataset.symbol;
+      if (!confirm(`Remove ${symbol} from your watchlist?`)) return;
+
+      try {
+        const resp = await fetch("/watchlist", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ symbol }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          resultEl.textContent = "Error: " + (data.error || resp.statusText);
+          return;
+        }
+        resultEl.textContent = "Removed " + data.symbol;
+        loadWatchlist();
+      } catch (err) {
+        resultEl.textContent = "Delete failed: " + err;
       }
     });
 
